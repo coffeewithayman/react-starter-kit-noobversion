@@ -40,4 +40,23 @@ export default defineSchema({
   })
     .index("type", ["type"])
     .index("polarEventId", ["polarEventId"]),
+  driveAudits: defineTable({
+    domain: v.string(),
+    totalUsers: v.number(),
+    totalFiles: v.number(),
+    results: v.any(),
+    createdAt: v.number(),
+  })
+    .index("domain", ["domain"])
+    .index("createdAt", ["createdAt"]),
+  driveConnections: defineTable({
+    userId: v.string(),
+    domain: v.string(),
+    adminEmail: v.string(),
+    isActive: v.boolean(),
+    lastAuditAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("userId", ["userId"])
+    .index("domain", ["domain"]),
 });

@@ -78,22 +78,22 @@ export default function Success() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Status:</span>
-                <span className="font-medium capitalize">{subscription.status}</span>
+                <span className="font-medium capitalize">{subscription?.status || 'Unknown'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Amount:</span>
                 <span className="font-medium">
-                  ${subscription.amount ? (subscription.amount / 100).toFixed(2) : '0.00'} {subscription.currency ? subscription.currency.toUpperCase() : 'USD'}
+                  ${subscription?.amount ? (subscription.amount / 100).toFixed(2) : '0.00'} {subscription?.currency ? subscription.currency.toUpperCase() : 'USD'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Billing Cycle:</span>
-                <span className="font-medium capitalize">{subscription.interval}</span>
+                <span className="font-medium capitalize">{subscription?.interval || 'Unknown'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Next Billing:</span>
                 <span className="font-medium">
-                  {subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'N/A'}
+                  {subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'N/A'}
                 </span>
               </div>
             </div>

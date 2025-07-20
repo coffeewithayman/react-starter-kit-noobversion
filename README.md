@@ -1,6 +1,6 @@
 # React Starter Kit (RSK)
 
-A modern, production-ready SaaS starter template for building full-stack React applications using React Router v7, Convex, Clerk, and Polar.sh. Ready for Vercel deployment with built-in AI chat capabilities.
+A modern, production-ready SaaS starter template for building full-stack React applications using React Router v7, Convex, Clerk, and Polar.sh. Ready for Vercel deployment with built-in AI chat capabilities and Google Drive security auditing.
 
 ## Features
 
@@ -15,6 +15,7 @@ A modern, production-ready SaaS starter template for building full-stack React a
 - 🗄️ **Real-time database with Convex** - Serverless backend
 - 🤖 **AI Chat Integration** - OpenAI-powered chat functionality
 - 📊 **Interactive Dashboard** - User management and analytics
+- 🛡️ **Google Drive Security Audit** - Domain-wide audit for publicly shared files
 - 🎯 **Webhook handling** - Payment and subscription events
 - 📱 **Responsive Design** - Mobile-first approach
 - 🚢 **Vercel Deployment Ready** - One-click deployment
@@ -34,6 +35,7 @@ A modern, production-ready SaaS starter template for building full-stack React a
 - **Clerk** - Authentication and user management
 - **Polar.sh** - Subscription billing and payments
 - **OpenAI** - AI chat capabilities
+- **Google Drive API** - Domain-wide security auditing
 
 ### Development & Deployment
 - **Vite** - Fast build tool
@@ -47,8 +49,9 @@ A modern, production-ready SaaS starter template for building full-stack React a
 - Node.js 18+ 
 - Clerk account for authentication
 - Convex account for database
-- Polar.sh account for subscriptions
-- OpenAI API key (for AI chat features)
+- Polar.sh account for subscriptions (optional)
+- OpenAI API key (optional, for AI chat features)
+- Google Cloud Project with Google Drive API enabled (optional, for domain audit features)
 
 ### Installation
 
@@ -75,12 +78,16 @@ VITE_CONVEX_URL=your_convex_url_here
 VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
 CLERK_SECRET_KEY=your_clerk_secret_key_here
 
-# Polar.sh Configuration
+# Google Drive API Configuration (optional, for domain audit features)
+GOOGLE_SERVICE_ACCOUNT_KEY=your_service_account_json_key_here
+
+# Polar.sh Configuration (optional, for payments)
 POLAR_ACCESS_TOKEN=your_polar_access_token_here
 POLAR_ORGANIZATION_ID=your_polar_organization_id_here
 POLAR_WEBHOOK_SECRET=your_polar_webhook_secret_here
+POLAR_SERVER=sandbox  # Use "production" for live payments, "sandbox" for testing
 
-# OpenAI Configuration (for AI chat)
+# OpenAI Configuration (optional, for AI chat)
 OPENAI_API_KEY=your_openai_api_key_here
 
 # Frontend URL for redirects
@@ -109,6 +116,80 @@ After running `npx convex dev`, you'll need to set the Clerk environment variabl
 6. Set up your Polar.sh webhook endpoint:
    - URL: `{your_domain}/webhook/polar`
    - Events: All subscription events
+
+## Payment Mode Configuration
+
+The application supports both sandbox (testing) and production payment modes:
+
+### Sandbox Mode (Default)
+For development and testing, the app uses Polar.sh sandbox mode by default:
+```bash
+POLAR_SERVER=sandbox  # or omit this variable entirely
+```
+
+### Production Mode
+To enable live payments, set the environment variable to production:
+```bash
+POLAR_SERVER=production
+```
+
+**Important:** When switching to production mode, ensure you're using:
+- Production Polar.sh credentials (access token, organization ID, webhook secret)
+- Production webhook endpoints
+- Production Clerk domain settings
+
+## Google Drive Security Audit Setup (Optional)
+
+The application includes a powerful Google Drive security audit feature that can scan your entire Google Workspace domain for publicly shared files. This is useful for security compliance and data governance.
+
+### Setting up Google Drive API
+
+1. **Create a Google Cloud Project:**
+   - Go to the [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select existing one
+   - Enable the Google Drive API and Admin SDK API
+
+2. **Create a Service Account:**
+   - Navigate to "IAM & Admin" > "Service Accounts"
+   - Click "Create Service Account"
+   - Give it a name like "drive-audit-service"
+   - Grant it the "Project Editor" role
+
+3. **Generate Service Account Key:**
+   - Click on the created service account
+   - Go to "Keys" tab
+   - Click "Add Key" > "Create new key"
+   - Choose JSON format and download
+
+4. **Enable Domain-wide Delegation:**
+   - In the service account details, check "Enable Google Workspace Domain-wide Delegation"
+   - Note the Client ID
+
+5. **Configure Google Workspace Admin:**
+   - Go to [Google Admin Console](https://admin.google.com/)
+   - Navigate to Security > API Controls > Domain-wide Delegation
+   - Add the Client ID from step 4
+   - Add these OAuth scopes:
+     ```
+     https://www.googleapis.com/auth/admin.directory.users.readonly
+     https://www.googleapis.com/auth/drive.metadata.readonly
+     https://www.googleapis.com/auth/drive.readonly
+     https://www.googleapis.com/auth/spreadsheets
+     https://www.googleapis.com/auth/drive.file
+     ```
+
+6. **Configure Environment Variable:**
+   - Convert the JSON key file content to a single line string
+   - Set `GOOGLE_SERVICE_ACCOUNT_KEY` to this JSON string
+
+### Using the Drive Audit Feature
+
+1. Navigate to "Drive Audit" in the dashboard
+2. Create a connection with your domain and admin email
+3. Run security audits to find publicly shared files
+4. View detailed reports and take action on vulnerable files
+
+**Security Note:** The service account credentials provide domain-wide access. Store them securely and never commit them to version control.
 
 ### Development
 
@@ -220,10 +301,12 @@ Make sure to deploy the output of `npm run build`
 - `VITE_CONVEX_URL` - Your Convex client URL
 - `VITE_CLERK_PUBLISHABLE_KEY` - Clerk publishable key
 - `CLERK_SECRET_KEY` - Clerk secret key
-- `POLAR_ACCESS_TOKEN` - Polar.sh API access token
-- `POLAR_ORGANIZATION_ID` - Your Polar.sh organization ID
-- `POLAR_WEBHOOK_SECRET` - Polar.sh webhook secret
-- `OPENAI_API_KEY` - OpenAI API key for chat features
+- `GOOGLE_SERVICE_ACCOUNT_KEY` - Google service account JSON key for domain-wide Drive access (optional)
+- `POLAR_ACCESS_TOKEN` - Polar.sh API access token (optional)
+- `POLAR_ORGANIZATION_ID` - Your Polar.sh organization ID (optional)
+- `POLAR_WEBHOOK_SECRET` - Polar.sh webhook secret (optional)
+- `POLAR_SERVER` - Set to "production" for live payments, "sandbox" for testing (defaults to sandbox)
+- `OPENAI_API_KEY` - OpenAI API key for chat features (optional)
 - `FRONTEND_URL` - Your production frontend URL
 
 ## Project Structure
@@ -237,6 +320,7 @@ Make sure to deploy the output of `npm run build`
 │   ├── routes/            # React Router routes
 │   └── utils/             # Utility functions
 ├── convex/                # Convex backend functions
+│   ├── googleDrive.ts     # Google Drive audit functionality
 ├── public/                # Static assets
 └── docs/                  # Documentation
 ```
@@ -248,6 +332,7 @@ Make sure to deploy the output of `npm run build`
 - `@clerk/react-router` - Authentication
 - `convex` - Real-time database
 - `@polar-sh/sdk` - Subscription management
+- `googleapis` - Google Drive API integration
 - `@ai-sdk/openai` & `ai` - AI chat capabilities
 - `@vercel/react-router` - Vercel deployment
 - `tailwindcss` v4 - Styling
