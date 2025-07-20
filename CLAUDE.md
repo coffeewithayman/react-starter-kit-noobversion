@@ -1,0 +1,258 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Development Commands
+
+- `npm run dev` - Start development server with HMR at http://localhost:5173
+- `npm run build` - Build for production (outputs to `build/`)
+- `npm run start` - Start production server from `./build/server/index.js`
+- `npm run typecheck` - Run TypeScript type checking and generate route types
+- `npx convex dev` - Start Convex development environment
+
+## Project Architecture
+
+This is a full-stack SaaS application built with React Router v7 as the meta-framework, providing SSR by default.
+
+### Core Stack
+- **Frontend**: React Router v7 with SSR, TailwindCSS v4, shadcn/ui components
+- **Backend**: Convex (real-time database + serverless functions)
+- **Auth**: Clerk for authentication with React Router integration
+- **Payments**: Polar.sh for subscription billing
+- **AI**: OpenAI integration for chat functionality
+- **Deployment**: Vercel-optimized with `@vercel/react-router` preset
+
+### Key Integrations
+- **Clerk + Convex**: Uses `ConvexProviderWithClerk` for authenticated database access
+- **Polar.sh**: Webhook handling at `/webhook/polar` for subscription events
+- **OpenAI**: AI SDK for streaming chat responses in dashboard
+
+### Route Structure
+Defined in `app/routes.ts` using React Router v7's file-based routing:
+- `/` - Homepage with pricing integration
+- `/dashboard/*` - Protected routes with shared layout
+- `/sign-in/*` and `/sign-up/*` - Clerk authentication flows
+- Webhook endpoint handled via HTTP routes in `convex/http.ts`
+
+### Database Schema (Convex)
+Located in `convex/schema.ts`:
+- `users` - User profiles synced with Clerk
+- `subscriptions` - Polar.sh subscription data with status tracking
+- `webhookEvents` - Audit log for webhook processing
+
+### Component Architecture
+- `app/components/ui/` - shadcn/ui components (Button, Card, etc.)
+- `app/components/homepage/` - Landing page sections
+- `app/components/dashboard/` - Dashboard-specific components with sidebar navigation
+- Follows composition patterns with Radix UI primitives
+
+### State Management
+- Server state via React Router loaders/actions
+- Real-time updates through Convex subscriptions
+- Authentication state managed by Clerk
+- No additional state management library needed
+
+### Styling Approach
+- TailwindCSS v4 with utility-first approach
+- Component variants using `class-variance-authority`
+- Responsive design with mobile-first breakpoints
+- Dark mode support via `next-themes`
+
+## Environment Configuration
+
+Development requires these environment variables in `.env.local`:
+- `CONVEX_DEPLOYMENT` and `VITE_CONVEX_URL` - Convex backend
+- `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` - Authentication
+- `POLAR_ACCESS_TOKEN`, `POLAR_ORGANIZATION_ID`, `POLAR_WEBHOOK_SECRET` - Billing
+- `OPENAI_API_KEY` - AI chat functionality
+- `FRONTEND_URL` - For webhook redirects
+
+## Development Workflow
+
+1. Start Convex development: `npx convex dev`
+2. Start React Router dev server: `npm run dev`
+3. Type checking: `npm run typecheck` (generates route types)
+4. Build verification: `npm run build`
+
+## Key Files for Modification
+
+- `app/routes.ts` - Route definitions
+- `convex/schema.ts` - Database schema
+- `app/root.tsx` - App shell with providers
+- `react-router.config.ts` - Framework configuration
+- `app/components/ui/` - Reusable UI components
+
+## Deployment
+
+### Automated Vercel Deployment
+
+Use the automated deployment script for seamless Vercel deployments:
+
+```bash
+npm run deploy:vercel
+```
+
+This script automatically:
+- Validates all required environment variables from `.env.local`
+- Sets up environment variables in Vercel (production, preview, development)
+- Deploys to Vercel production
+- Handles optional variables (OpenAI, Polar.sh) if present
+
+#### Setting up the deployment script (if missing):
+
+1. **Create the deployment script at `scripts/deploy-vercel.sh`:**
+
+```bash
+#!/bin/bash
+
+# Vercel Deployment Script for React Starter Kit
+# This script automatically sets up environment variables and deploys to Vercel
+
+set -e
+
+echo "🚀 Starting Vercel deployment process..."
+
+# Check if .env.local exists
+if [ ! -f ".env.local" ]; then
+    echo "❌ Error: .env.local file not found. Please create it first."
+    exit 1
+fi
+
+# Source the environment variables
+source .env.local
+
+# Check required variables
+REQUIRED_VARS=("VITE_CONVEX_URL" "VITE_CLERK_PUBLISHABLE_KEY" "CLERK_SECRET_KEY" "VITE_CLERK_FRONTEND_API_URL")
+for var in "${REQUIRED_VARS[@]}"; do
+    if [ -z "${!var}" ]; then
+        echo "❌ Error: Required environment variable $var is not set in .env.local"
+        exit 1
+    fi
+done
+
+echo "✅ Environment variables validated"
+
+# Function to add environment variable to Vercel
+add_env_var() {
+    local var_name=$1
+    local var_value=$2
+    local environments=${3:-"production preview development"}
+    
+    echo "📝 Adding $var_name to Vercel..."
+    
+    # Check if variable already exists
+    if vercel env ls | grep -q "$var_name"; then
+        echo "⚠️  $var_name already exists, removing old version..."
+        echo "$var_value" | vercel env rm "$var_name" production --yes 2>/dev/null || true
+        echo "$var_value" | vercel env rm "$var_name" preview --yes 2>/dev/null || true
+        echo "$var_value" | vercel env rm "$var_name" development --yes 2>/dev/null || true
+    fi
+    
+    # Add new variable
+    for env in $environments; do
+        echo "$var_value" | vercel env add "$var_name" "$env"
+    done
+}
+
+echo "🔧 Setting up Vercel environment variables..."
+
+# Get the Vercel project URL for FRONTEND_URL
+echo "📡 Getting Vercel project information..."
+VERCEL_PROJECT_URL=$(vercel ls --scope team 2>/dev/null | grep "$(basename $PWD)" | head -1 | awk '{print $2}' || echo "")
+
+if [ -z "$VERCEL_PROJECT_URL" ]; then
+    echo "⚠️  Could not automatically detect Vercel URL. You may need to set FRONTEND_URL manually."
+    FRONTEND_URL_VALUE=${FRONTEND_URL:-"https://your-app.vercel.app"}
+else
+    FRONTEND_URL_VALUE="https://$VERCEL_PROJECT_URL"
+fi
+
+# Add all environment variables
+add_env_var "VITE_CONVEX_URL" "$VITE_CONVEX_URL"
+add_env_var "VITE_CLERK_PUBLISHABLE_KEY" "$VITE_CLERK_PUBLISHABLE_KEY"
+add_env_var "CLERK_SECRET_KEY" "$CLERK_SECRET_KEY"
+add_env_var "VITE_CLERK_FRONTEND_API_URL" "$VITE_CLERK_FRONTEND_API_URL"
+add_env_var "FRONTEND_URL" "$FRONTEND_URL_VALUE"
+
+# Add optional environment variables if they exist
+if [ -n "$OPENAI_API_KEY" ]; then
+    add_env_var "OPENAI_API_KEY" "$OPENAI_API_KEY"
+fi
+
+if [ -n "$POLAR_ACCESS_TOKEN" ]; then
+    add_env_var "POLAR_ACCESS_TOKEN" "$POLAR_ACCESS_TOKEN"
+fi
+
+if [ -n "$POLAR_ORGANIZATION_ID" ]; then
+    add_env_var "POLAR_ORGANIZATION_ID" "$POLAR_ORGANIZATION_ID"
+fi
+
+if [ -n "$POLAR_WEBHOOK_SECRET" ]; then
+    add_env_var "POLAR_WEBHOOK_SECRET" "$POLAR_WEBHOOK_SECRET"
+fi
+
+echo "✅ Environment variables configured successfully"
+
+# Deploy to production
+echo "🚀 Deploying to Vercel production..."
+vercel --prod
+
+echo "✅ Deployment completed successfully!"
+echo "🌐 Your app should be available at: $FRONTEND_URL_VALUE"
+```
+
+2. **Make the script executable:**
+```bash
+chmod +x scripts/deploy-vercel.sh
+```
+
+3. **Add the npm script to `package.json`:**
+```json
+{
+  "scripts": {
+    "deploy:vercel": "./scripts/deploy-vercel.sh"
+  }
+}
+```
+
+### Manual Vercel Deployment
+
+If you need to deploy manually:
+
+1. **Set environment variables in Vercel:**
+   ```bash
+   vercel env add VITE_CONVEX_URL production preview development
+   vercel env add VITE_CLERK_PUBLISHABLE_KEY production preview development
+   vercel env add CLERK_SECRET_KEY production preview development
+   vercel env add VITE_CLERK_FRONTEND_API_URL production preview development
+   vercel env add FRONTEND_URL production preview development
+   vercel env add OPENAI_API_KEY production preview development
+   ```
+
+2. **Deploy:**
+   ```bash
+   vercel --prod
+   ```
+
+### Important Deployment Requirements
+
+- **Environment Variables**: All variables from `.env.local` must be set in Vercel
+- **VITE_CONVEX_URL**: Critical - deployment will fail without this
+- **FRONTEND_URL**: Should be set to your actual Vercel domain for webhooks
+- **Convex Dashboard**: Ensure `VITE_CLERK_FRONTEND_API_URL` is set in Convex environment variables
+
+### Troubleshooting Deployment Issues
+
+**"No address provided to ConvexReactClient" error:**
+- Verify `VITE_CONVEX_URL` is set in Vercel environment variables
+- Check that the variable name starts with `VITE_` (required for client-side access)
+
+**Authentication errors:**
+- Verify all Clerk environment variables are set in both Vercel and Convex dashboard
+- Ensure `VITE_CLERK_FRONTEND_API_URL` matches your Clerk application domain
+
+### Other Deployment Options
+
+- **Docker**: Dockerfile included for containerized deployments
+- **Build output**: Located in `build/` with separate client and server bundles
+- **SSR**: Enabled by default via `@vercel/react-router` preset

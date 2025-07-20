@@ -90,10 +90,23 @@ FRONTEND_URL=http://localhost:5173
 4. Initialize Convex:
 
 ```bash
-npx convex dev
+npx convex dev --configure
 ```
 
-5. Set up your Polar.sh webhook endpoint:
+This will create your Convex deployment and automatically update your `.env.local` with the deployment URL.
+
+5. Configure Convex environment variables:
+
+After running `npx convex dev`, you'll need to set the Clerk environment variable in your Convex dashboard:
+
+- Go to your Convex dashboard at: `https://dashboard.convex.dev/d/YOUR_DEPLOYMENT_NAME/settings/environment-variables`
+- Add the environment variable:
+  - Key: `VITE_CLERK_FRONTEND_API_URL`
+  - Value: Your Clerk Frontend API URL (e.g., `https://your-app-name.clerk.accounts.dev`)
+
+**Note:** The Convex dashboard URL will be displayed in your terminal after running `npx convex dev`. Look for a message like "View the Convex dashboard at https://dashboard.convex.dev/d/your-deployment-name".
+
+6. Set up your Polar.sh webhook endpoint:
    - URL: `{your_domain}/webhook/polar`
    - Events: All subscription events
 

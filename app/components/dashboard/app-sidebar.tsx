@@ -1,5 +1,4 @@
-import { IconDashboard, IconSettings } from "@tabler/icons-react";
-import { MessageCircle } from "lucide-react";
+import { IconDashboard, IconSettings, IconMessageCircle } from "@tabler/icons-react";
 import { Link } from "react-router";
 import { NavMain } from "./nav-main";
 import { NavSecondary } from "./nav-secondary";
@@ -23,7 +22,7 @@ const data = {
     {
       title: "Chat",
       url: "/dashboard/chat",
-      icon: MessageCircle,
+      icon: IconMessageCircle,
     },
   ],
   navSecondary: [
